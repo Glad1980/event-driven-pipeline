@@ -33,12 +33,12 @@ public class OrderAcceptanceVerticle extends GeneralVerticle {
 		List<String> items = new ArrayList<String>();
 		for (int i = 0; i < jsonArray.size(); i++) {
 			items.add(jsonArray.getString(i));
-			OrderRequest or = new OrderRequest(req.getString("orderId"), items, req.getDouble("amount"));
-			boolean isValid = DummyServices.validateOrder(or);
-
-			OrderCreatedEvent event = new OrderCreatedEvent(request, or.getOrderId(), or.getItems(), isValid);
-
-			send("inventory.check", event);
 		}
+		OrderRequest or = new OrderRequest(req.getString("orderId"), items, req.getDouble("amount"));
+		boolean isValid = DummyServices.validateOrder(or);
+
+		OrderCreatedEvent event = new OrderCreatedEvent(request, or.getOrderId(), or.getItems(), isValid);
+
+		send("inventory.check", event);
 	}
 }
