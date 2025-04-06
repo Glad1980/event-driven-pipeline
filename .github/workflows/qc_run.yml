@@ -1,0 +1,46 @@
+name: qc_run
+on:
+  workflow_dispatch:
+env:
+  WORK_PATH: /mnt/log_gatherer
+  LOGS_PATH: /mnt
+  JAVA_HOME_17: /usr/lib/jvm/java-17-openjdk-17.0.7.0.7-3.el8.x86_64
+  DATA: |
+    echo "begin >>> stop old containers"
+    docker stop log_gatherer
+
+    echo "<<< end stop old containers"
+    
+    echo "begin >>> remove old containers"
+    docker rm --force -f log_gatherer
+    echo "<<< end remove old containers"
+    
+    echo "begin >>> run all docker images"
+    docker run --log-driver=json-file --log-opt max-size=10m --log-opt max-file=3 -d -e JAVA_TOOL_OPTIONS="-Xms500m -Xmx4g" -p 9066:9066 -v /mnt/logs:/logs --name log_gatherer log_gatherer
+    docker ps
+    echo "<<< end run all docker images"
+jobs:
+
+  run_docker_qc1:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_1 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}
+
+  run_docker_qc2:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_2 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}

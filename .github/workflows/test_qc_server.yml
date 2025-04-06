@@ -1,0 +1,35 @@
+# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
+# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
+
+name: test_server
+on:
+  workflow_dispatch:
+env:
+  DATA: |
+    docker ps
+    docker restart log_gatherer
+    echo "<<< end run all docker images"
+jobs:
+  run_docker_qc1:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_1 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}
+          
+  run_docker_qc2:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_2 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}

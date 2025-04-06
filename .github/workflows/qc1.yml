@@ -1,0 +1,102 @@
+# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
+# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
+
+name: qc
+on:
+  workflow_dispatch:
+env:
+  WORK_PATH: /mnt/log_gatherer
+  LOGS_PATH: /mnt
+  JAVA_HOME_17: /usr/lib/jvm/java-17-openjdk-17.0.7.0.7-3.el8.x86_64
+  DATA: |
+    echo "Start move active config file ((QC /mnt/log_gatherer))..>"
+    cp /mnt/log_gatherer/src/main/resources/Logs_Dockerfile /mnt/log_gatherer
+    echo "<.. End move active config file"
+    
+    echo "begin >>> stop old containers"
+    docker stop log_gatherer
+
+    echo "<<< end stop old containers"
+    
+    echo "begin >>> remove old containers"
+    docker rm --force -f log_gatherer
+    echo "<<< end remove old containers"
+    
+    echo "begin >>> remove old images"
+    docker rmi --force -f log_gatherer
+    echo "<<< end remove old images"
+    
+    echo "begin >>> build all docker images"
+    cd /mnt/log_gatherer/
+    docker build -t log_gatherer . -f Logs_Dockerfile
+    echo "<<< end build all docker images"
+    
+    echo "begin >>> run all docker images"
+    docker run --log-driver=json-file --log-opt max-size=10m --log-opt max-file=3 -d -e JAVA_TOOL_OPTIONS="-Xms500m -Xmx4g" -p 9066:9066 -v /mnt/logs:/logs --name log_gatherer log_gatherer
+    docker ps
+    echo "<<< end run all docker images"
+jobs:
+  build_copy_qc1:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Checkout main branch from GitHub
+        uses: actions/checkout@v3
+      - name: Have GitHub Actions Build Maven Project (All)
+        run: |
+          export JAVA_HOME=${{env.JAVA_HOME_17}}
+          /opt/maven/bin/mvn -f pom.xml clean install -X
+      - name: Copy file via ssh key SSH_HOST_QC1
+        uses: appleboy/scp-action@master
+        with:
+          HOST: ${{ secrets.QC_NI_1 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          source: "target/*fat.jar,src/main/resources/*"
+          target: ${{env.WORK_PATH}}
+
+  run_docker_qc1:
+    runs-on: [self-hosted, HQ]
+    needs: [ build_copy_qc1 ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_1 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}
+          
+  build_copy_qc2:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Checkout main branch from GitHub
+        uses: actions/checkout@v3
+      - name: Have GitHub Actions Build Maven Project (All)
+        run: |
+          export JAVA_HOME=${{env.JAVA_HOME_17}}
+          /opt/maven/bin/mvn -f pom.xml clean install -X
+      - name: Copy file via ssh key SSH_HOST_QC2
+        uses: appleboy/scp-action@master
+        with:
+          HOST: ${{ secrets.QC_NI_2 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          source: "target/*fat.jar,src/main/resources/*"
+          target: ${{env.WORK_PATH}}
+
+  run_docker_qc2:
+    runs-on: [self-hosted, HQ]
+    needs: [ build_copy_qc2 ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.QC_NI_2 }}
+          KEY: ${{ secrets.QC_NI_k }}
+          USERNAME: ${{ secrets.QC_NI_u }}
+          PORT: ${{ secrets.QC_NI_p }}
+          script: ${{env.DATA}}
+          

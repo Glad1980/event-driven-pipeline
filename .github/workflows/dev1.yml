@@ -1,0 +1,66 @@
+name: dev
+on:
+  workflow_dispatch:
+env:
+  WORK_PATH: /mnt/log_gatherer
+  LOGS_PATH: /mnt
+  JAVA_HOME_17: /usr/lib/jvm/java-17-openjdk-17.0.7.0.7-3.el8.x86_64
+  DATA: |
+    echo "Start move active config file ((dev /mnt/log_gatherer))..>"
+    cp /mnt/log_gatherer/src/main/resources/Logs_Dockerfile /mnt/log_gatherer
+    echo "<.. End move active config file"
+    
+    echo "begin >>> stop old containers"
+    docker stop log_gatherer
+
+    echo "<<< end stop old containers"
+    
+    echo "begin >>> remove old containers"
+    docker rm --force -f log_gatherer
+    echo "<<< end remove old containers"
+    
+    echo "begin >>> remove old images"
+    docker rmi --force -f log_gatherer
+    echo "<<< end remove old images"
+    
+    echo "begin >>> build all docker images"
+    cd /mnt/log_gatherer/
+    docker build -t log_gatherer . -f Logs_Dockerfile
+    echo "<<< end build all docker images"
+    
+    echo "begin >>> run all docker images"
+    docker run --log-driver=json-file --log-opt max-size=10m --log-opt max-file=3 -d  -p 9066:9066 -v /mnt/logs:/logs --name log_gatherer log_gatherer
+    docker ps
+    echo "<<< end run all docker images"
+jobs:
+  build_copy_dev1:
+    runs-on: [self-hosted, HQ]
+    steps:
+      - name: Checkout main branch from GitHub
+        uses: actions/checkout@v3
+      - name: Have GitHub Actions Build Maven Project (All)
+        run: |
+          export JAVA_HOME=${{env.JAVA_HOME_17}}
+          /opt/maven/bin/mvn -f pom.xml clean install -X
+      - name: Copy file via ssh key SSH_HOST_DEV1
+        uses: appleboy/scp-action@master
+        with:
+          HOST: ${{ secrets.SSH_HOST_DEV1 }}
+          KEY: ${{ secrets.SSH_KEY_DEV }}
+          USERNAME: ${{ secrets.SSH_USERNAME_DEV }}
+          PORT: ${{ secrets.SSH_PORT_DEV }}
+          source: "target/*fat.jar,src/main/resources/*"
+          target: ${{env.WORK_PATH}}
+
+  run_docker_dev1:
+    runs-on: [self-hosted, HQ]
+    needs: [ build_copy_dev1 ]
+    steps:
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          HOST: ${{ secrets.SSH_HOST_DEV1 }}
+          KEY: ${{ secrets.SSH_KEY_DEV }}
+          USERNAME: ${{ secrets.SSH_USERNAME_DEV }}
+          PORT: ${{ secrets.SSH_PORT_DEV }}
+          script: ${{env.DATA}}
