@@ -1,7 +1,6 @@
 package com.vertx.pipeline.vertical.core;
 
 import static com.vertx.pipeline.util.Constant.ADDRESS_FIRST_VERTICLE;
-import static com.vertx.pipeline.util.Constant.ADDRESS_SECOND_VERTICLE;
 import static com.vertx.pipeline.util.Constant.KEY_CORRELATION_ID;
 import static com.vertx.pipeline.util.Constant.KEY_SYSTEM;
 

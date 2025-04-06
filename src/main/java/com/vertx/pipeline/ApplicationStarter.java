@@ -14,6 +14,7 @@ import com.vertx.pipeline.message.LocalMessageCodec;
 import com.vertx.pipeline.message.RequestRoutingMessage;
 import com.vertx.pipeline.message.ResponseRoutingMessage;
 import com.vertx.pipeline.message.example.InventoryCheckedEvent;
+import com.vertx.pipeline.message.example.OrderCreatedEvent;
 import com.vertx.pipeline.message.example.OrderRequest;
 import com.vertx.pipeline.message.example.PaymentProcessedEvent;
 import com.vertx.pipeline.util.ProjectConfig;
@@ -98,6 +99,8 @@ public class ApplicationStarter extends GeneralVerticle {
 		vertx.eventBus().registerDefaultCodec(AbstractMessage.class, new LocalMessageCodec<>(AbstractMessage.class));
 		vertx.eventBus().registerDefaultCodec(RequestRoutingMessage.class,
 				new LocalMessageCodec<>(RequestRoutingMessage.class));
+		vertx.eventBus().registerDefaultCodec(ResponseRoutingMessage.class,
+				new LocalMessageCodec<>(ResponseRoutingMessage.class));
 		// example
 		vertx.eventBus().registerDefaultCodec(OrderRequest.class,
 				new LocalMessageCodec<>(OrderRequest.class));
@@ -107,5 +110,7 @@ public class ApplicationStarter extends GeneralVerticle {
 				new LocalMessageCodec<>(OrientationRequestedType.class));
 		vertx.eventBus().registerDefaultCodec(PaymentProcessedEvent.class,
 				new LocalMessageCodec<>(PaymentProcessedEvent.class));
+		vertx.eventBus().registerDefaultCodec(OrderCreatedEvent.class,
+				new LocalMessageCodec<>(OrderCreatedEvent.class));
 	}
 }
